@@ -1,0 +1,57 @@
+services:
+  # Remember that these service names can be used as a DNS.
+  # Each service is a container.
+  postgres:
+    image: postgres:10
+    environment:
+      - POSTGRES_PASSWORD=penguins # This should not be exposed here.
+  redis:
+    image: redis:4
+  api:
+    build: # Build using a Dockerfile instead of an image.
+      dockerfile: Dockerfile.dev 
+      context: ./server # Where the Dockerfile is located.
+    volumes:
+      - /app/node_modules # Bookmark the folder. i.e, leave the folder as is, don't map this one.
+      - ./server:/app # Map ./server to /app inside the container.
+    environment:
+      - REDIS_HOST=redis # From our redis service built earlier.
+      - REDIS_PORT=6379 # From documentation on redis.
+      - PGUSER=postgres # Postgres stuff below is from documentation. 
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=penguins # defined above in the environment variable. These should be secrets..
+      - PGPORT=5432
+  client:
+    environment:
+      - WDS_SOCKET_PORT=0
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /app/node_modules # Bookmark the folder.
+      - ./client:/app # Map ./client to /app in the container.
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules # Bookmark the folder
+      - ./worker:/app # map ./worker to the /app in the container.
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+  nginx:
+    # Makes sure that api and client containers are started before nginx. However, this does not
+    # ensure that they're fully operational before nginx start. To do that, take a look at healthcheck,
+    # which would be used in combination with depends_on.
+    depends_on:
+      - api
+      - client
+    restart: always # Always reboot this if it crashes.
+    build: # Building from a Dockerfile.
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports: # Map port 3050 on the host to port 80 in the container.
+      - '3050:80'
+
