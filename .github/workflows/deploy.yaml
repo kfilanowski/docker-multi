@@ -10,15 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-      - run: docker build -t kfilanowski/react-mutli-test -f ./client/Dockerfile.dev ./client
-      - run: docker run -e CI=true kfilanowski/react-multi-test npm test
+      - run: docker build -t ${{ secrets.DOCKER_USERNAME }}/react-multi-test -f ./client/Dockerfile.dev ./client
+      - run: docker run -e CI=true ${{ secrets.DOCKER_USERNAME }}/react-multi-test npm test
 
-      - run: docker build -t kfilanowski/multi-client ./client
-      - run: docker build -t kfilanowski/multi-nginx ./nginx
-      - run: docker build -t kfilanowski/multi-server ./server
-      - run: docker build -t kfilanowski/multi-worker ./worker
+      - run: docker build -t ${{ secrets.DOCKER_USERNAME }}/multi-client ./client
+      - run: docker build -t ${{ secrets.DOCKER_USERNAME }}/multi-nginx ./nginx
+      - run: docker build -t ${{ secrets.DOCKER_USERNAME }}/multi-server ./server
+      - run: docker build -t ${{ secrets.DOCKER_USERNAME }}/multi-worker ./worker
 
-      - run: docker push kfilanowski/multi-client
-      - run: docker push kfilanowski/multi-nginx
-      - run: docker push kfilanowski/multi-server
-      - run: docker push kfilanowski/multi-worker
+      - run: docker push ${{ secrets.DOCKER_USERNAME }}/multi-client
+      - run: docker push ${{ secrets.DOCKER_USERNAME }}/multi-nginx
+      - run: docker push ${{ secrets.DOCKER_USERNAME }}/multi-server
+      - run: docker push ${{ secrets.DOCKER_USERNAME }}/multi-worker
