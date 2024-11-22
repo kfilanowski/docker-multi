@@ -1,0 +1,56 @@
+name: Deploy Frontend
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+      - name: Build Docker image for testing.
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/docker-react -f Dockerfile.dev .
+      - name: Run Tests
+        run: docker run -e CI=true ${{ secrets.DOCKER_USERNAME }}/docker-react npm test
+
+  deploy:
+    if: github.event_name == 'push'  
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+      
+      - run: docker build -t ${{ secrets.DOCKER_USERNAME }}/multi-client ./client
+      - run: docker build -t ${{ secrets.DOCKER_USERNAME }}/multi-nginx ./nginx
+      - run: docker build -t ${{ secrets.DOCKER_USERNAME }}/multi-server ./server
+      - run: docker build -t ${{ secrets.DOCKER_USERNAME }}/multi-worker ./worker
+
+      - run: docker push ${{ secrets.DOCKER_USERNAME }}/multi-client
+      - run: docker push ${{ secrets.DOCKER_USERNAME }}/multi-nginx
+      - run: docker push ${{ secrets.DOCKER_USERNAME }}/multi-server
+      - run: docker push ${{ secrets.DOCKER_USERNAME }}/multi-worker
+
+      - name: Generate deployment package
+        run: zip deploy.zip docker-compose.yml
+      - name: Deploy to EB
+        uses: einaregilsson/beanstalk-deploy@v18
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
+          application_name: multi-docker-kevin3
+          environment_name: Multi-docker-kevin3-env
+          existing_bucket_name: elasticbeanstalk-us-east-1-140023362796
+          region: us-east-1
+          version_label: ${{ github.sha }}
+          deployment_package: deploy.zip
+
